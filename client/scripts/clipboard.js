@@ -1,14 +1,11 @@
-// Polyfill for Navigator.clipboard.writeText
 if (!navigator.clipboard) {
     navigator.clipboard = {
         writeText: text => {
 
-            // A <span> contains the text to copy
             const span = document.createElement('span');
             span.textContent = text;
-            span.style.whiteSpace = 'pre'; // Preserve consecutive spaces and newlines
+            span.style.whiteSpace = 'pre';
 
-            // Paint the span outside the viewport
             span.style.position = 'absolute';
             span.style.left = '-9999px';
             span.style.top = '-9999px';

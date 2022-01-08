@@ -24,7 +24,7 @@ class SnapdropServer {
 
         this._rooms = {};
 
-        console.log('Snapdrop is running on port', port);
+        console.log('Snapdrop został uruchomiony na porcie', port);
     }
 
     _onConnection(peer) {

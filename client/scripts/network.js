@@ -15,7 +15,7 @@ class ServerConnection {
         if (this._isConnected() || this._isConnecting()) return;
         const ws = new WebSocket(this._endpoint());
         ws.binaryType = 'arraybuffer';
-        ws.onopen = e => console.log('WS: server connected');
+        ws.onopen = e => console.log('WS: połączono z serwerem');
         ws.onmessage = e => this._onMessage(e.data);
         ws.onclose = e => this._onDisconnect();
         ws.onerror = e => console.error(e);
@@ -45,7 +45,7 @@ class ServerConnection {
                 Events.fire('display-name', msg);
                 break;
             default:
-                console.error('WS: unkown message type', msg);
+                console.error('WS: nieznany typ wiadomości', msg);
         }
     }
 
@@ -55,7 +55,6 @@ class ServerConnection {
     }
 
     _endpoint() {
-        // hack to detect if deployment or development environment
         const protocol = location.protocol.startsWith('https') ? 'wss' : 'ws';
         const webrtc = window.isRtcSupported ? '/webrtc' : '/fallback';
         const url = protocol + '://' + location.host + location.pathname + 'server' + webrtc;
@@ -69,8 +68,8 @@ class ServerConnection {
     }
 
     _onDisconnect() {
-        console.log('WS: server disconnected');
-        Events.fire('notify-user', 'Connection lost. Retry in 5 seconds...');
+        console.log('WS: rozłączono z serwerem');
+        Events.fire('notify-user', 'Połączenie zerwane. Powtórzenie próby za 5 sekund...');
         clearTimeout(this._reconnectTimer);
         this._reconnectTimer = setTimeout(_ => this._connect(), 5000);
     }
@@ -192,7 +191,6 @@ class Peer {
         const progress = this._digester.progress;
         this._onDownloadProgress(progress);
 
-        // occasionally notify sender about our progress 
         if (progress - this._lastProgress < 0.01) return;
         this._lastProgress = progress;
         this._sendProgress(progress);
@@ -212,7 +210,7 @@ class Peer {
         this._reader = null;
         this._busy = false;
         this._dequeueFile();
-        Events.fire('notify-user', 'File transfer completed.');
+        Events.fire('notify-user', 'Transfer plików zakończony.');
     }
 
     sendText(text) {
@@ -230,7 +228,7 @@ class RTCPeer extends Peer {
 
     constructor(serverConnection, peerId) {
         super(serverConnection, peerId);
-        if (!peerId) return; // we will listen for a caller
+        if (!peerId) return;
         this._connect(peerId, true);
     }
 
@@ -256,7 +254,7 @@ class RTCPeer extends Peer {
     _openChannel() {
         const channel = this._conn.createDataChannel('data-channel', { 
             ordered: true,
-            reliable: true // Obsolete. See https://developer.mozilla.org/en-US/docs/Web/API/RTCDataChannel/reliable
+            reliable: true 
         });
         channel.binaryType = 'arraybuffer';
         channel.onopen = e => this._onChannelOpened(e);
@@ -264,7 +262,6 @@ class RTCPeer extends Peer {
     }
 
     _onDescription(description) {
-        // description.sdp = description.sdp.replace('b=AS:30', 'b=AS:1638400');
         this._conn.setLocalDescription(description)
             .then(_ => this._sendSignal({ sdp: description }))
             .catch(e => this._onError(e));
@@ -303,7 +300,7 @@ class RTCPeer extends Peer {
     _onChannelClosed() {
         console.log('RTC: channel closed', this._peerId);
         if (!this.isCaller) return;
-        this._connect(this._peerId, true); // reopen the channel
+        this._connect(this._peerId, true);
     }
 
     _onConnectionStateChange(e) {
@@ -322,7 +319,7 @@ class RTCPeer extends Peer {
     _onIceConnectionStateChange() {
         switch (this._conn.iceConnectionState) {
             case 'failed':
-                console.error('ICE Gathering failed');
+                console.error('ICE Gathering nie powiodło się');
                 break;
             default:
                 console.log('ICE Gathering', this._conn.iceConnectionState);
@@ -345,7 +342,6 @@ class RTCPeer extends Peer {
     }
 
     refresh() {
-        // check if channel is open. otherwise create one
         if (this._isConnected() || this._isConnecting()) return;
         this._connect(this._peerId, this._isCaller);
     }
@@ -492,7 +488,6 @@ class FileDigester {
         if (isNaN(this.progress)) this.progress = 1
 
         if (this._bytesReceived < this._size) return;
-        // we are done
         let blob = new Blob(this._buffer, { type: this._mime });
         this._callback({
             name: this._name,

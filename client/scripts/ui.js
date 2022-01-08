@@ -5,11 +5,10 @@ window.isDownloadSupported = (typeof document.createElement('a').download !== 'u
 window.isProductionEnvironment = !window.location.host.startsWith('localhost');
 window.iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-// set display name
 Events.on('display-name', e => {
     const me = e.detail.message;
     const $displayName = $('displayName')
-    $displayName.textContent = 'You are known as ' + me.displayName;
+    $displayName.textContent = 'Twój pseudonim ' + me.displayName;
     $displayName.title = me.deviceName;
 });
 
@@ -24,10 +23,10 @@ class PeersUI {
     }
 
     _onPeerJoined(peer) {
-        if ($(peer.id)) return; // peer already exists
+        if ($(peer.id)) return;
         const peerUI = new PeerUI(peer);
         $$('x-peers').appendChild(peerUI.$el);
-        setTimeout(e => window.animateBackground(false), 1750); // Stop animation
+        setTimeout(e => window.animateBackground(false), 1750);
     }
 
     _onPeers(peers) {
@@ -57,10 +56,6 @@ class PeersUI {
             .filter(i => i.type.indexOf('image') > -1)
             .map(i => i.getAsFile());
         const peers = document.querySelectorAll('x-peer');
-        // send the pasted image content to the only peer if there is one
-        // otherwise, select the peer somehow by notifying the client that
-        // "image data has been pasted, click the client to which to send it"
-        // not implemented
         if (files.length > 0 && peers.length === 1) {
             Events.fire('files-selected', {
                 files: files,
@@ -74,7 +69,7 @@ class PeerUI {
 
     html() {
         return `
-            <label class="column center" title="Click to send files or right click to send a text">
+            <label class="column center" title="Kliknij, aby wysłać pliki lub kliknij prawym przyciskiem myszy, aby wysłać wiadomość">
                 <input type="file" multiple>
                 <x-icon shadow="1">
                     <svg class="icon"><use xlink:href="#"/></svg>
@@ -116,7 +111,6 @@ class PeerUI {
         el.addEventListener('contextmenu', e => this._onRightClick(e));
         el.addEventListener('touchstart', e => this._onTouchStart(e));
         el.addEventListener('touchend', e => this._onTouchEnd(e));
-        // prevent browser's default file drop behavior
         Events.on('dragover', e => e.preventDefault());
         Events.on('drop', e => e.preventDefault());
     }
@@ -147,7 +141,7 @@ class PeerUI {
             files: files,
             to: this._peer.id
         });
-        $input.value = null; // reset input
+        $input.value = null;
     }
 
     setProgress(progress) {
@@ -198,7 +192,7 @@ class PeerUI {
     _onTouchEnd(e) {
         if (Date.now() - this._touchStart < 500) {
             clearTimeout(this._touchTimer);
-        } else { // this was a long tap
+        } else {
             if (e) e.preventDefault();
             Events.fire('text-recipient', this._peer.id);
         }
@@ -245,11 +239,10 @@ class ReceiveDialog extends Dialog {
     }
 
     _dequeueFile() {
-        if (!this._filesQueue.length) { // nothing to do
+        if (!this._filesQueue.length) {
             this._busy = false;
             return;
         }
-        // dequeue next file
         setTimeout(_ => {
             this._busy = false;
             this._nextFile();
@@ -267,7 +260,7 @@ class ReceiveDialog extends Dialog {
             return
         }
         if(file.mime.split('/')[0] === 'image'){
-            console.log('the file is image');
+            console.log('plik jest obrazem');
             this.$el.querySelector('.preview').style.visibility = 'inherit';
             this.$el.querySelector("#img-preview").src = url;
         }
@@ -277,7 +270,6 @@ class ReceiveDialog extends Dialog {
         this.show();
 
         if (window.isDownloadSupported) return;
-        // fallback for iOS
         $a.target = '_blank';
         const reader = new FileReader();
         reader.onload = e => $a.href = reader.result;
@@ -292,7 +284,7 @@ class ReceiveDialog extends Dialog {
         } else if (bytes > 1000) {
             return Math.round(bytes / 1000) + ' KB';
         } else {
-            return bytes + ' Bytes';
+            return bytes + ' Bajtów';
         }
     }
 
@@ -375,7 +367,7 @@ class ReceiveTextDialog extends Dialog {
 
     async _onCopy() {
         await navigator.clipboard.writeText(this.$text.textContent);
-        Events.fire('notify-user', 'Copied to clipboard');
+        Events.fire('notify-user', 'Skopiowano do schowka');
     }
 }
 
@@ -396,10 +388,8 @@ class Toast extends Dialog {
 class Notifications {
 
     constructor() {
-        // Check if the browser supports notifications
         if (!('Notification' in window)) return;
 
-        // Check whether notification permissions have already been granted
         if (Notification.permission !== 'granted') {
             this.$button = $('notification');
             this.$button.removeAttribute('hidden');
@@ -415,7 +405,7 @@ class Notifications {
                 Events.fire('notify-user', Notifications.PERMISSION_ERROR || 'Error');
                 return;
             }
-            this._notify('Even more snappy sharing!');
+            this._notify('Jeszcze więcej szybkiej wymiany informacji!');
             this.$button.setAttribute('hidden', 1);
         });
     }
@@ -429,12 +419,10 @@ class Notifications {
         try {
             notification = new Notification(message, config);
         } catch (e) {
-            // Android doesn't support "new Notification" if service worker is installed
             if (!serviceWorker || !serviceWorker.showNotification) return;
             notification = serviceWorker.showNotification(message, config);
         }
 
-        // Notification is persistent on Android. We have to close it manually
         if (closeTimeout) {
             setTimeout(_ => notification.close(), closeTimeout);
         }
@@ -444,16 +432,16 @@ class Notifications {
 
     _messageNotification(message) {
         if (isURL(message)) {
-            const notification = this._notify(message, 'Click to open link');
+            const notification = this._notify(message, 'Kliknij, aby otworzyć link');
             this._bind(notification, e => window.open(message, '_blank', null, true));
         } else {
-            const notification = this._notify(message, 'Click to copy text');
+            const notification = this._notify(message, 'Kliknij, aby skopiować wiadomość');
             this._bind(notification, e => this._copyText(message, notification));
         }
     }
 
     _downloadNotification(message) {
-        const notification = this._notify(message, 'Click to download');
+        const notification = this._notify(message, 'Kliknij, aby pobrać');
         if (!window.isDownloadSupported) return;
         this._bind(notification, e => this._download(notification));
     }
@@ -466,7 +454,7 @@ class Notifications {
     _copyText(message, notification) {
         notification.close();
         if (!navigator.clipboard.writeText(message)) return;
-        this._notify('Copied text to clipboard');
+        this._notify('Skopiowano wiadomość do schowka');
     }
 
     _bind(notification, handler) {
@@ -490,11 +478,11 @@ class NetworkStatusUI {
     }
 
     _showOfflineMessage() {
-        Events.fire('notify-user', 'You are offline');
+        Events.fire('notify-user', 'Jesteś w trybie niedostępnym');
     }
 
     _showOnlineMessage() {
-        Events.fire('notify-user', 'You are back online');
+        Events.fire('notify-user', 'Jesteś z powrotem dostępny');
     }
 }
 
@@ -508,12 +496,12 @@ class WebShareTargetUI {
         let shareTargetText = title ? title : '';
         shareTargetText += text ? shareTargetText ? ' ' + text : text : '';
 
-        if(url) shareTargetText = url; // We share only the Link - no text. Because link-only text becomes clickable.
+        if(url) shareTargetText = url;
 
         if (!shareTargetText) return;
         window.shareTargetText = shareTargetText;
         history.pushState({}, 'URL Rewrite', '/');
-        console.log('Shared Target Text:', '"' + shareTargetText + '"');
+        console.log('Wspólny tekst docelowy:', '"' + shareTargetText + '"');
     }
 }
 
@@ -542,14 +530,13 @@ const snapdrop = new Snapdrop();
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js')
         .then(serviceWorker => {
-            console.log('Service Worker registered');
+            console.log('Service Worker zarejestrowany');
             window.serviceWorker = serviceWorker
         });
 }
 
 window.addEventListener('beforeinstallprompt', e => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
-        // don't display install banner when installed
         return e.preventDefault();
     } else {
         const btn = document.querySelector('#install')
@@ -559,7 +546,6 @@ window.addEventListener('beforeinstallprompt', e => {
     }
 });
 
-// Background Animation
 Events.on('load', () => {
     let c = document.createElement('canvas');
     document.body.appendChild(c);
@@ -624,12 +610,12 @@ Events.on('load', () => {
 });
 
 Notifications.PERMISSION_ERROR = `
-Notifications permission has been blocked
-as the user has dismissed the permission prompt several times.
-This can be reset in Page Info
-which can be accessed by clicking the lock icon next to the URL.`;
+Uprawnienia powiadomień zostały zablokowany,
+ponieważ użytkownik kilkakrotnie odrzucił monit o zezwolenie.
+Można to zresetować w Informacjach o stronie,
+które są dostępne po kliknięciu ikony kłódki obok adresu URL.`;
 
-document.body.onclick = e => { // safari hack to fix audio
+document.body.onclick = e => {
     document.body.onclick = null;
     if (!(/.*Version.*Safari.*/.test(navigator.userAgent))) return;
     blop.play();
